@@ -1,6 +1,5 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
-use std::time::Duration;
 
 use operit_store::PreferencesDataStore::{mutableStateFlow, MutableStateFlow, StateFlow};
 use serde::{Deserialize, Serialize};
@@ -250,6 +249,17 @@ pub fn completePluginLoadingSession() {
         }
         progress.forceExpanded = false;
     });
-    std::thread::sleep(Duration::from_millis(120));
+    settlePluginLoadingOverlay();
     skipPluginLoading();
 }
+
+/// 在收起遮罩前让 native UI 有机会画出完成态。wasm32 没有阻塞线程，
+/// 且构建期的平台边界检查会拒绝 `std::thread`，因此延时只存在于 native 目标上。
+#[cfg(not(target_arch = "wasm32"))]
+fn settlePluginLoadingOverlay() {
+    use std::time::Duration;
+    std::thread::sleep(Duration::from_millis(120));
+}
+
+#[cfg(target_arch = "wasm32")]
+fn settlePluginLoadingOverlay() {}
