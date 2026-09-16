@@ -816,10 +816,38 @@ Future<void> _run(
 }
 
 String _command(String executable) {
-  if (Platform.isWindows) {
-    return '$executable.cmd';
+  if (!Platform.isWindows) {
+    return executable;
+  }
+  // Windows 上不同工具链的启动器后缀并不一致：npm/yarn/pnpm 一类 Node 工具
+  // 只会生成 .cmd 垫片，而 rustup 只会安装 cargo.exe 这类原生可执行文件。
+  // Dart 的 Process.run 底层走 CreateProcess，不会应用 PATHEXT，所以这里必须
+  // 挑一个真实存在于 PATH 上的文件，否则会抛 ProcessException:
+  // The system cannot find the file specified。
+  for (final extension in const ['.exe', '.cmd', '.bat']) {
+    if (_existsOnPath('$executable$extension')) {
+      return '$executable$extension';
+    }
   }
   return executable;
+}
+
+/// 判断某个文件名是否存在于当前 PATH 上（仅 Windows 需要）。
+bool _existsOnPath(String fileName) {
+  final path = Platform.environment['PATH'];
+  if (path == null || path.isEmpty) {
+    return false;
+  }
+  for (final rawDirectory in path.split(';')) {
+    final directory = rawDirectory.trim().replaceAll('"', '');
+    if (directory.isEmpty) {
+      continue;
+    }
+    if (File('$directory\\$fileName').existsSync()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 String _pythonExecutable(Directory repoRoot) {
