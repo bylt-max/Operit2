@@ -534,11 +534,9 @@ class _RuntimeSettingsPanelState extends State<RuntimeSettingsPanel> {
       ),
     ];
     if (widget.embedded) {
-      return _DeviceSpaceBackdrop(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       );
     }
     return _DeviceSpaceBackdrop(

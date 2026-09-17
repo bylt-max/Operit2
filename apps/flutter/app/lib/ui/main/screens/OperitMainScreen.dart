@@ -20,6 +20,7 @@ import '../TopBarController.dart';
 import '../layout/TabletLayout.dart';
 import '../navigation/AppNavigationModels.dart';
 import '../navigation/AppRouteCatalog.dart';
+import '../navigation/ToolPkgCatalogChangeBus.dart';
 import 'OperitScreens.dart';
 
 class OperitMainScreen extends StatefulWidget {
@@ -59,6 +60,7 @@ class _OperitMainScreenState extends State<OperitMainScreen> {
   bool _isTabletSidebarExpanded = false;
   bool _isNavigatingBack = false;
   bool _requestedInitialToolPkgNavigationRefresh = false;
+  StreamSubscription<void>? _toolPkgCatalogChangeSubscription;
   int _backPressedTime = 0;
 
   /// Initializes navigation services and drawer data subscriptions.
@@ -76,6 +78,11 @@ class _OperitMainScreenState extends State<OperitMainScreen> {
     NotificationActivationService.instance.installChatHandler(
       _activateNotificationChat,
     );
+    _toolPkgCatalogChangeSubscription = ToolPkgCatalogChangeBus.listen(() {
+      if (mounted) {
+        unawaited(_refreshToolPkgNavigationModel());
+      }
+    });
     unawaited(_initializeDrawerData());
   }
 
@@ -110,6 +117,7 @@ class _OperitMainScreenState extends State<OperitMainScreen> {
     AppRouterGateway.clear();
     AppRouteDiscoveryGateway.clear();
     NotificationActivationService.instance.clearChatHandler();
+    _toolPkgCatalogChangeSubscription?.cancel();
     _drawerHistoriesSubscription?.cancel();
     _drawerCurrentChatSubscription?.cancel();
     _drawerActiveStreamingChatIdsSubscription?.cancel();

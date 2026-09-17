@@ -11,6 +11,7 @@ import '../../../../core/proxy/generated/CoreProxyModels.g.dart' as core_proxy;
 import '../../../common/components/AnimatedLazyIndexedStack.dart';
 import '../../../common/components/M3LoadingIndicator.dart';
 import '../../../main/navigation/AppNavigationModels.dart';
+import '../../../main/navigation/ToolPkgCatalogChangeBus.dart';
 import '../../../main/screens/OperitScreens.dart';
 import '../../../main/screens/ScreenRouteRegistry.dart';
 import '../../../theme/OperitGlassSurface.dart';
@@ -170,6 +171,7 @@ class _PackageManagerScreenState extends State<PackageManagerScreen> {
           containerPackageName: plugin.packageName,
         );
       }
+      ToolPkgCatalogChangeBus.notifyCatalogChanged();
     } catch (error, stackTrace) {
       debugPrint('Failed to update plugin state: $error\n$stackTrace');
       if (!mounted) {
@@ -196,6 +198,7 @@ class _PackageManagerScreenState extends State<PackageManagerScreen> {
       } else {
         await _packageManager.disablePackage(packageName: package.name);
       }
+      ToolPkgCatalogChangeBus.notifyCatalogChanged();
     } catch (error, stackTrace) {
       debugPrint('Failed to update package state: $error\n$stackTrace');
       if (!mounted) {
@@ -241,6 +244,7 @@ class _PackageManagerScreenState extends State<PackageManagerScreen> {
       final deleted = await _packageManager.deletePackage(
         packageName: package.name,
       );
+      ToolPkgCatalogChangeBus.notifyCatalogChanged();
       if (!mounted) {
         return;
       }
@@ -299,6 +303,7 @@ class _PackageManagerScreenState extends State<PackageManagerScreen> {
       final deleted = await _packageManager.deletePackage(
         packageName: plugin.packageName,
       );
+      ToolPkgCatalogChangeBus.notifyCatalogChanged();
       if (!mounted) {
         return;
       }
@@ -900,6 +905,7 @@ class _PackageManagerScreenState extends State<PackageManagerScreen> {
       if (!mounted) {
         return;
       }
+      ToolPkgCatalogChangeBus.notifyCatalogChanged();
       await _loadSnapshot();
       if (mounted && result.trim().isNotEmpty) {
         _showSnackBar(result);

@@ -184,6 +184,9 @@ class _MenuActionRow extends StatelessWidget {
               onPressed: onZoomOut,
               icon: const Icon(Icons.remove, size: 18),
               visualDensity: VisualDensity.compact,
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               constraints: const BoxConstraints.tightFor(width: 28, height: 28),
               padding: EdgeInsets.zero,
             ),
@@ -208,6 +211,9 @@ class _MenuActionRow extends StatelessWidget {
               onPressed: onZoomIn,
               icon: const Icon(Icons.add, size: 18),
               visualDensity: VisualDensity.compact,
+              style: const ButtonStyle(
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
               constraints: const BoxConstraints.tightFor(width: 28, height: 28),
               padding: EdgeInsets.zero,
             ),

@@ -120,26 +120,24 @@ class CollapsedDrawerContent extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
               if (pluginEntries.isNotEmpty) ...<Widget>[
                 Divider(
                   indent: 14,
                   endIndent: 14,
                   color: appearance.dividerColor,
                 ),
-                const SizedBox(height: 8),
-                for (final entry in pluginEntries) ...<Widget>[
-                  Center(
-                    child: _RoundDrawerButton(
-                      selected: selectedRouteId == entry.routeId,
-                      appearance: appearance,
-                      icon: entry.icon,
-                      onClick: () => onNavigationEntrySelected(entry),
+                for (final entry in pluginEntries)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Center(
+                      child: _RoundDrawerButton(
+                        selected: selectedRouteId == entry.routeId,
+                        appearance: appearance,
+                        icon: entry.icon,
+                        onClick: () => onNavigationEntrySelected(entry),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                ],
-                const SizedBox(height: 8),
               ],
             ],
           ),

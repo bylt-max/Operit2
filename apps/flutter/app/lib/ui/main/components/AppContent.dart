@@ -1,5 +1,7 @@
 // ignore_for_file: file_names
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../MainLayoutController.dart';
@@ -49,13 +51,13 @@ class AppContent extends StatefulWidget {
 
 class _AppContentState extends State<AppContent> {
   static const Duration _enabledPageTransitionDuration = Duration(
-    milliseconds: 280,
+    milliseconds: 240,
   );
   static const Duration _disabledPageTransitionDuration = Duration(
     milliseconds: 400,
   );
-  static const double _phonePageTransitionOffset = 20;
-  static const double _tabletPageTransitionOffset = 28;
+  static const double _phonePageTransitionOffset = 12;
+  static const double _tabletPageTransitionOffset = 16;
   static const double _topBarHeight = 64;
   static const double _navigationIconStartPadding = 4;
   static const double _navigationIconSize = 48;
@@ -69,6 +71,7 @@ class _AppContentState extends State<AppContent> {
   String? _pendingRemovalKey;
   bool _isTransitioning = false;
   bool _transitionAllowsCrossfade = true;
+  Timer? _transitionTimer;
 
   @override
   void initState() {
@@ -96,6 +99,7 @@ class _AppContentState extends State<AppContent> {
     _screenCache.putIfAbsent(screenKey, () => Builder(builder: screen.build));
   }
 
+  /// Starts the current transition and cancels cleanup from its predecessor.
   void _updateTransition(String currentScreenKey, OperitScreen currentScreen) {
     final fromKey = _lastObservedCurrentKey;
     final fromScreen = _lastObservedScreen;
@@ -103,6 +107,8 @@ class _AppContentState extends State<AppContent> {
       return;
     }
 
+    _transitionTimer?.cancel();
+    _removePendingScreen(currentScreenKey);
     final canCrossfade =
         fromScreen.participatesInCrossfadeTransition &&
         currentScreen.participatesInCrossfadeTransition;
@@ -119,7 +125,7 @@ class _AppContentState extends State<AppContent> {
       return;
     }
 
-    Future<void>.delayed(_activeTransitionDuration, () {
+    _transitionTimer = Timer(_activeTransitionDuration, () {
       if (!mounted) {
         return;
       }
@@ -132,6 +138,13 @@ class _AppContentState extends State<AppContent> {
     });
   }
 
+  /// Cancels transition cleanup when the main content host is removed.
+  @override
+  void dispose() {
+    _transitionTimer?.cancel();
+    super.dispose();
+  }
+
   Duration get _pageTransitionDuration {
     return widget.enableNavigationAnimation
         ? _enabledPageTransitionDuration
@@ -142,9 +155,13 @@ class _AppContentState extends State<AppContent> {
     return _pageTransitionDuration;
   }
 
+  /// Drops the screen left behind by a back navigation, keeping keep-alive
+  /// screens cached so their scroll position and state survive navigation.
   void _removePendingScreen(String currentScreenKey) {
     final keyToRemove = _pendingRemovalKey;
-    if (keyToRemove != null && keyToRemove != currentScreenKey) {
+    if (keyToRemove != null &&
+        keyToRemove != currentScreenKey &&
+        _screenKeepAliveCache[keyToRemove] != true) {
       _screenCache.remove(keyToRemove);
       _screenKeepAliveCache.remove(keyToRemove);
     }
@@ -356,6 +373,7 @@ class _AnimatedScreenSlotState extends State<_AnimatedScreenSlot> {
     }
   }
 
+  /// Retargets visible pages directly so interrupted transitions stay continuous.
   @override
   void didUpdateWidget(covariant _AnimatedScreenSlot oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -369,6 +387,10 @@ class _AnimatedScreenSlotState extends State<_AnimatedScreenSlot> {
       return;
     }
     if (widget.isCurrentScreen) {
+      if (oldWidget.isActiveInStack) {
+        _visible = true;
+        return;
+      }
       _visible = false;
       _scheduleShow();
       return;
@@ -395,32 +417,21 @@ class _AnimatedScreenSlotState extends State<_AnimatedScreenSlot> {
     super.dispose();
   }
 
+  /// Keeps the page ancestry stable across visible, exiting and offstage roles.
   @override
   Widget build(BuildContext context) {
-    if (!widget.isActiveInStack) {
-      // Keep cached screens alive without painting them during page motion.
-      return Positioned.fill(
-        child: Offstage(
-          offstage: true,
-          child: TickerMode(enabled: false, child: widget.child),
-        ),
-      );
-    }
-
     final targetOpacity = widget.snapshotDuringExit ? _targetOpacity : 1.0;
-    final targetScale = _targetScale;
     final targetTranslationX = _targetTranslationX;
     final opacityDuration = widget.snapshotDuringExit
         ? _exitPageFadeDuration
         : widget.duration;
-    final opacityCurve = widget.snapshotDuringExit
-        ? Curves.easeOutCubic
-        : Curves.fastOutSlowIn;
-    final screenChild = SnapshotWidget(
-      controller: _snapshotController,
-      mode: SnapshotMode.forced,
-      autoresize: true,
-      child: widget.child,
+    final screenChild = RepaintBoundary(
+      child: SnapshotWidget(
+        controller: _snapshotController,
+        mode: SnapshotMode.forced,
+        autoresize: true,
+        child: widget.child,
+      ),
     );
 
     final animatedScreen = IgnorePointer(
@@ -428,31 +439,31 @@ class _AnimatedScreenSlotState extends State<_AnimatedScreenSlot> {
       child: AnimatedOpacity(
         opacity: targetOpacity,
         duration: opacityDuration,
-        curve: opacityCurve,
+        curve: Curves.easeOutCubic,
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(end: targetTranslationX),
           duration: widget.duration,
-          curve: Curves.fastOutSlowIn,
+          curve: Curves.easeOutCubic,
           builder: (context, translationX, child) {
             return Transform.translate(
               offset: Offset(translationX, 0),
               child: child,
             );
           },
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: targetScale),
-            duration: widget.duration,
-            curve: Curves.fastOutSlowIn,
-            builder: (context, scale, child) {
-              return Transform.scale(scale: scale, child: child);
-            },
-            child: screenChild,
-          ),
+          child: screenChild,
         ),
       ),
     );
 
-    return Positioned.fill(child: animatedScreen);
+    return Positioned.fill(
+      child: Offstage(
+        offstage: !widget.isActiveInStack,
+        child: TickerMode(
+          enabled: widget.isActiveInStack,
+          child: animatedScreen,
+        ),
+      ),
+    );
   }
 
   double get _targetOpacity {
@@ -478,18 +489,5 @@ class _AnimatedScreenSlotState extends State<_AnimatedScreenSlot> {
     return widget.isNavigatingBack
         ? widget.pageOffset * 0.45
         : -widget.pageOffset * 0.45;
-  }
-
-  double get _targetScale {
-    if (!widget.allowCrossfade) {
-      return 1.0;
-    }
-    if (!widget.enableNavigationAnimation) {
-      return 1.0;
-    }
-    if (_visible) {
-      return 1.0;
-    }
-    return widget.isCurrentScreen ? 0.985 : 0.992;
   }
 }

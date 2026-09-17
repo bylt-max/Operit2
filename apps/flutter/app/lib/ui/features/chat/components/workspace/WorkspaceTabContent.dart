@@ -14,7 +14,6 @@ import 'WorkspaceFileBrowserContent.dart';
 import 'WorkspaceFilePreviewContent.dart';
 import 'WorkspaceHomeContent.dart';
 import 'WorkspaceOverviewModels.dart';
-import 'WorkspaceSetupContent.dart';
 import 'WorkspaceTabModels.dart';
 import 'terminal/WorkspaceTerminalContent.dart';
 
@@ -44,7 +43,6 @@ class WorkspaceTabContent extends StatelessWidget {
     required this.onActivateCurrentTab,
     required this.onCloseCurrentTab,
     required this.onOpenWorkspaceCreator,
-    required this.onCreateWorkspace,
     required this.onBindWorkspace,
     required this.onChooseExistingWorkspace,
     required this.splitMarkdownContent,
@@ -82,7 +80,6 @@ class WorkspaceTabContent extends StatelessWidget {
   final VoidCallback onActivateCurrentTab;
   final VoidCallback onCloseCurrentTab;
   final VoidCallback onOpenWorkspaceCreator;
-  final Future<void> Function(String name) onCreateWorkspace;
   final Future<void> Function(String workspace) onBindWorkspace;
   final VoidCallback onChooseExistingWorkspace;
   final MarkdownContentSplitter splitMarkdownContent;
@@ -105,11 +102,6 @@ class WorkspaceTabContent extends StatelessWidget {
           onOpenTerminalSessions: onOpenTerminalSessions,
           onOpenBrowserSessions: onOpenBrowserSessions,
           onOpenBrowser: () => onOpenBrowser(),
-        );
-      case WorkspaceTabKind.setup:
-        return WorkspaceSetupContent(
-          onCreateWorkspace: onCreateWorkspace,
-          onChooseExistingWorkspace: onChooseExistingWorkspace,
         );
       case WorkspaceTabKind.workspacePicker:
         return WorkspaceFileBrowserContent(

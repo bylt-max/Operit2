@@ -133,7 +133,8 @@ class _WorkspaceStatusSummary extends StatelessWidget {
         : '工作区总览';
     final subtitle = hasWorkspace ? '工作区总览' : '当前对话未绑定工作区';
     return OperitGlassSurface(
-      color: colorScheme.surfaceContainerLowest.withValues(alpha: 0.76),
+      color: Colors.transparent,
+      transparentAlpha: 0,
       layer: OperitGlassSurfaceLayer.card,
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
@@ -595,7 +596,8 @@ class _WorkspacePrimaryAction extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OperitGlassSurface(
-      color: theme.colorScheme.surfaceContainerLowest.withValues(alpha: 0.64),
+      color: Colors.transparent,
+      transparentAlpha: 0,
       layer: OperitGlassSurfaceLayer.card,
       borderRadius: BorderRadius.circular(8),
       border: Border.all(

@@ -212,8 +212,11 @@ class _MarketGroupedGridSliver<T> extends StatelessWidget {
   final List<_MarketGridGroup<T>> groups;
   final Widget Function(T item) itemBuilder;
 
+  /// Reuses the grouped row plan while scrolling within the same column count.
   @override
   Widget build(BuildContext context) {
+    int? layoutColumns;
+    late Widget grid;
     return SliverLayoutBuilder(
       builder: (context, constraints) {
         final contentWidth = constraints.crossAxisExtent - 24;
@@ -222,50 +225,62 @@ class _MarketGroupedGridSliver<T> extends StatelessWidget {
             : contentWidth >= 760
             ? 2
             : 1;
-        final rows = _marketGridRows<T>(
-          groups: groups,
-          columnCount: columnCount,
-        );
-        return SliverList.builder(
-          itemCount: rows.length,
-          addAutomaticKeepAlives: false,
-          itemBuilder: (context, index) {
-            final row = rows[index];
-            if (row.isHeader) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: _MarketDateHeader(text: row.label!),
-              );
-            }
-            final children = <Widget>[];
-            for (var itemIndex = 0; itemIndex < columnCount; itemIndex += 1) {
-              if (itemIndex > 0) {
-                children.add(const SizedBox(width: 10));
-              }
-              children.add(
-                Expanded(
-                  child: itemIndex < row.itemCount
-                      ? itemBuilder(row.items![row.start + itemIndex])
-                      : const SizedBox.shrink(),
-                ),
-              );
-            }
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                12,
-                row.topPadding,
-                12,
-                row.bottomPadding,
-              ),
-              child: SizedBox(
-                height: 104,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: children,
-                ),
-              ),
-            );
-          },
+        // Parent updates replace this cache; scroll offsets only relayout it.
+        if (layoutColumns != columnCount) {
+          layoutColumns = columnCount;
+          grid = _buildRows(columnCount);
+        }
+        return grid;
+      },
+    );
+  }
+
+  /// Builds lazy date headers and rows with independent card paint boundaries.
+  Widget _buildRows(int columnCount) {
+    final rows = _marketGridRows<T>(groups: groups, columnCount: columnCount);
+    return SliverList.builder(
+      itemCount: rows.length,
+      addAutomaticKeepAlives: false,
+      addRepaintBoundaries: false,
+      itemBuilder: (context, index) {
+        final row = rows[index];
+        if (row.isHeader) {
+          return RepaintBoundary(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: _MarketDateHeader(text: row.label!),
+            ),
+          );
+        }
+        final children = <Widget>[];
+        for (var itemIndex = 0; itemIndex < columnCount; itemIndex += 1) {
+          if (itemIndex > 0) {
+            children.add(const SizedBox(width: 10));
+          }
+          children.add(
+            Expanded(
+              child: itemIndex < row.itemCount
+                  ? RepaintBoundary(
+                      child: itemBuilder(row.items![row.start + itemIndex]),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          );
+        }
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            12,
+            row.topPadding,
+            12,
+            row.bottomPadding,
+          ),
+          child: SizedBox(
+            height: 104,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: children,
+            ),
+          ),
         );
       },
     );
@@ -537,9 +552,9 @@ String _truncateMarketBrowseDescription(String description) {
   if (description.length <= 100) {
     return description;
   }
-  final characters = description.characters;
-  if (characters.length > 100) {
-    return '${characters.take(100)}...';
+  final prefix = description.characters.take(101);
+  if (prefix.length > 100) {
+    return '${prefix.take(100)}...';
   }
   return description;
 }

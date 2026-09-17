@@ -912,33 +912,36 @@ class _InputSurface extends StatelessWidget {
   final EdgeInsetsGeometry margin;
   final bool transparentSurface;
 
+  /// Retains the input surface paint while keyboard motion changes its position.
   @override
   Widget build(BuildContext context) {
     final effectiveColor = transparentSurface ? Colors.transparent : color;
-    final decorated = SizedBox(
-      width: width,
-      child: DecoratedBox(
-        decoration: ShapeDecoration(
-          color: effectiveColor,
-          shape: shape,
-          shadows: transparentSurface
-              ? const <BoxShadow>[]
-              : <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 18,
-                    spreadRadius: 1,
-                    offset: const Offset(0, -4),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.035),
-                    blurRadius: 5,
-                    spreadRadius: 0,
-                    offset: const Offset(0, -1),
-                  ),
-                ],
+    final decorated = RepaintBoundary(
+      child: SizedBox(
+        width: width,
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
+            color: effectiveColor,
+            shape: shape,
+            shadows: transparentSurface
+                ? const <BoxShadow>[]
+                : <BoxShadow>[
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                      offset: const Offset(0, -4),
+                    ),
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.035),
+                      blurRadius: 5,
+                      spreadRadius: 0,
+                      offset: const Offset(0, -1),
+                    ),
+                  ],
+          ),
+          child: child,
         ),
-        child: child,
       ),
     );
     final Widget surface;

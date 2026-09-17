@@ -1,6 +1,7 @@
 // ignore_for_file: file_names
 
 import '../../../../core/proxy/generated/CoreProxyClients.g.dart';
+import '../../../main/navigation/ToolPkgCatalogChangeBus.dart';
 
 class QuickPluginCreatorSetupResult {
   const QuickPluginCreatorSetupResult({
@@ -26,6 +27,7 @@ Future<QuickPluginCreatorSetupResult> runQuickPluginCreatorSetup(
     final packageResult = await clients.application
         .packageManager()
         .enablePackage(packageName: 'operit_editor');
+    ToolPkgCatalogChangeBus.notifyCatalogChanged();
     return QuickPluginCreatorSetupResult(
       success: true,
       skillName: skill.name,

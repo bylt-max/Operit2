@@ -374,8 +374,6 @@ String _tabTitle(AppLocalizations l10n, WorkspaceTab tab) {
   switch (tab.kind) {
     case WorkspaceTabKind.home:
       return l10n.home;
-    case WorkspaceTabKind.setup:
-      return l10n.workspaceSetupTitle;
     case WorkspaceTabKind.workspacePicker:
       return l10n.workspaceBindExistingTitle;
     case WorkspaceTabKind.files:

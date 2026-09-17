@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import '../../../../core/proxy/generated/CoreProxyClients.g.dart';
 import '../../../../core/proxy/generated/CoreProxyModels.g.dart';
+import '../../../main/navigation/ToolPkgCatalogChangeBus.dart';
 
 const String currentAppVersion = '2.0.0+6';
 final Uri coreMarketAuthCompletionRedirectUri = Uri.parse(
@@ -219,6 +220,7 @@ Future<String> runCoreMarketInstall({
   if (!result.toLowerCase().startsWith('successfully imported')) {
     throw StateError(result);
   }
+  ToolPkgCatalogChangeBus.notifyCatalogChanged();
   return result;
 }
 

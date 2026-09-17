@@ -229,6 +229,7 @@ class _WorkspaceHtmlPreviewToolbarButton extends StatelessWidget {
       onPressed: onPressed,
       icon: Icon(icon, size: 18),
       visualDensity: VisualDensity.compact,
+      style: const ButtonStyle(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(width: 34, height: 34),
     );

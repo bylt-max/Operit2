@@ -816,12 +816,6 @@ class _DrawerContentState extends State<DrawerContent> {
     });
   }
 
-  void _collapseHistories() {
-    setState(() {
-      _historyRenderLimit = _collapsedHistoryLimit;
-    });
-  }
-
   void _rememberExpansionState() {
     _rememberedCollapsedCharacterSections
       ..clear()
@@ -1095,16 +1089,6 @@ class _DrawerContentState extends State<DrawerContent> {
                         label: '展开更多 $hiddenHistoryCount',
                         appearance: widget.appearance,
                         onClick: () => _showMoreHistories(hiddenHistoryCount),
-                      ),
-                    ),
-                  if (!searching &&
-                      _historyRenderLimit > _collapsedHistoryLimit)
-                    SliverToBoxAdapter(
-                      child: _HistoryLimitButton(
-                        icon: Icons.keyboard_arrow_up,
-                        label: '收起',
-                        appearance: widget.appearance,
-                        onClick: _collapseHistories,
                       ),
                     ),
                   if (widget.pluginEntries.isNotEmpty) ...<Widget>[

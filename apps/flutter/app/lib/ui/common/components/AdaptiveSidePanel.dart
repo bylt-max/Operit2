@@ -150,11 +150,7 @@ class _AdaptiveSidePanelState extends State<AdaptiveSidePanel> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => widget.onOpenChanged(false),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.18),
-                ),
-              ),
+              child: const ColoredBox(color: Colors.transparent),
             ),
           ),
         AnimatedPositionedDirectional(

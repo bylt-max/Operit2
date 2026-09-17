@@ -1056,7 +1056,7 @@ class _MenuSection extends StatelessWidget {
         ),
         if (expanded)
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 8, 6),
+            padding: const EdgeInsets.fromLTRB(12, 0, 8, 4),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: ColoredBox(
@@ -1092,7 +1092,7 @@ class _SwitchRow extends StatelessWidget {
   final bool enabled;
   final VoidCallback onTap;
 
-  /// Builds a compact switch row using the model row metrics.
+  /// Builds a compact switch row with a layout-sized switch control.
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1116,7 +1116,7 @@ class _SwitchRow extends StatelessWidget {
     return InkWell(
       onTap: enabled ? onTap : null,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 36),
+        constraints: const BoxConstraints(minHeight: 32),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Row(
@@ -1145,11 +1145,15 @@ class _SwitchRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Transform.scale(
-                scale: 0.65,
-                child: Switch(
-                  value: checked,
-                  onChanged: enabled ? (_) => onTap() : null,
+              SizedBox(
+                width: 40,
+                height: 28,
+                child: FittedBox(
+                  child: Switch(
+                    value: checked,
+                    onChanged: enabled ? (_) => onTap() : null,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                 ),
               ),
             ],

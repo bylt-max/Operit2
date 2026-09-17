@@ -144,7 +144,7 @@ class _WorkspacePanelState extends State<WorkspacePanel> {
       unawaited(_refreshWorkspaceOverviewMountedFolders());
     }
     if (!oldWidget.hasBoundWorkspace && widget.hasBoundWorkspace) {
-      _replaceSetupTabWithFilesTab();
+      _replacePickerTabWithFilesTab();
     }
   }
 
@@ -734,8 +734,7 @@ class _WorkspacePanelState extends State<WorkspacePanel> {
       onFinishWebVisit: _finishWebVisitTab,
       onActivateCurrentTab: () => _selectWorkspaceTab(tab),
       onCloseCurrentTab: () => _closeWorkspaceTab(tab),
-      onOpenWorkspaceCreator: _openWorkspaceSetupTab,
-      onCreateWorkspace: _createWorkspace,
+      onOpenWorkspaceCreator: _showCreateWorkspaceDialog,
       onBindWorkspace: _bindWorkspaceFolder,
       onChooseExistingWorkspace: _openWorkspaceBindingPickerTab,
       splitMarkdownContent: (content) => _coreClients.chatRuntimeHolderMain
@@ -1137,15 +1136,109 @@ class _WorkspacePanelState extends State<WorkspacePanel> {
     });
   }
 
-  /// Opens the workspace creation and binding setup tab.
-  void _openWorkspaceSetupTab() {
-    _openSingletonTab(
-      const WorkspaceTab(
-        kind: WorkspaceTabKind.setup,
-        title: '',
-        icon: Icons.tune_outlined,
-      ),
+  /// Shows the workspace creation dialog without opening a setup tab.
+  void _showCreateWorkspaceDialog() {
+    final nameController = TextEditingController();
+    var dialogBusy = false;
+    String? dialogError;
+    final dialogFuture = showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final l10n = AppLocalizations.of(context)!;
+            Future<void> submitCreateWorkspace() async {
+              if (dialogBusy) {
+                return;
+              }
+              final name = nameController.text.trim();
+              if (name.isEmpty) {
+                setDialogState(() {
+                  dialogError = l10n.workspaceNameHint;
+                });
+                return;
+              }
+              setDialogState(() {
+                dialogBusy = true;
+                dialogError = null;
+              });
+              try {
+                await _createWorkspace(name);
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+              } catch (error, stackTrace) {
+                debugPrint('Workspace creation failed: $error\n$stackTrace');
+                if (dialogContext.mounted) {
+                  setDialogState(() {
+                    dialogError = error.toString();
+                  });
+                }
+              } finally {
+                if (dialogContext.mounted) {
+                  setDialogState(() {
+                    dialogBusy = false;
+                  });
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: Text(l10n.workspaceCreateTitle),
+              content: SizedBox(
+                width: 420,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      TextField(
+                        controller: nameController,
+                        autofocus: true,
+                        enabled: !dialogBusy,
+                        decoration: InputDecoration(
+                          labelText: l10n.workspaceNameLabel,
+                          hintText: l10n.workspaceNameHint,
+                        ),
+                      ),
+                      if (dialogError != null) ...<Widget>[
+                        const SizedBox(height: 10),
+                        Text(
+                          dialogError!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 14),
+                    ],
+                  ),
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: dialogBusy
+                      ? null
+                      : () {
+                          Navigator.of(dialogContext).pop();
+                        },
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: dialogBusy
+                      ? null
+                      : () {
+                          unawaited(submitCreateWorkspace());
+                        },
+                  child: Text(l10n.bind),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
+    unawaited(dialogFuture.whenComplete(nameController.dispose));
   }
 
   /// Opens the file tree for one mounted workspace folder.
@@ -1191,7 +1284,7 @@ class _WorkspacePanelState extends State<WorkspacePanel> {
     setState(() {
       _filesListingRevision += 1;
     });
-    _replaceSetupTabWithFilesTab();
+    _replacePickerTabWithFilesTab();
   }
 
   /// Creates a named workspace and switches the workspace panel back to files.
@@ -1206,28 +1299,23 @@ class _WorkspacePanelState extends State<WorkspacePanel> {
     setState(() {
       _filesListingRevision += 1;
     });
-    _replaceSetupTabWithFilesTab();
+    _replacePickerTabWithFilesTab();
   }
 
-  /// Replaces setup-style tabs with the workspace files tab.
-  void _replaceSetupTabWithFilesTab() {
+  /// Replaces the workspace picker tab with the workspace files tab.
+  void _replacePickerTabWithFilesTab() {
     final targetIndex = _tabs.indexWhere(
-      (tab) =>
-          tab.kind == WorkspaceTabKind.setup ||
-          tab.kind == WorkspaceTabKind.workspacePicker,
+      (tab) => tab.kind == WorkspaceTabKind.workspacePicker,
     );
     if (targetIndex < 0) {
       return;
     }
     final selectedTab = _tabs[_selectedIndex];
     final selectedWasTarget =
-        selectedTab.kind == WorkspaceTabKind.setup ||
         selectedTab.kind == WorkspaceTabKind.workspacePicker;
     setState(() {
       _tabs.removeWhere(
-        (tab) =>
-            tab.kind == WorkspaceTabKind.setup ||
-            tab.kind == WorkspaceTabKind.workspacePicker,
+        (tab) => tab.kind == WorkspaceTabKind.workspacePicker,
       );
       var filesIndex = _tabs.indexWhere(
         (tab) => tab.kind == WorkspaceTabKind.files,

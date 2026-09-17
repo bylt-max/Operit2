@@ -1736,8 +1736,11 @@ class _MarketCategoryGridSliver extends StatelessWidget {
   final List<core_proxy.MarketCategoryInfo> categories;
   final ValueChanged<core_proxy.MarketCategoryInfo> onOpenCategory;
 
+  /// Retains the category delegate until its data or column count changes.
   @override
   Widget build(BuildContext context) {
+    int? layoutColumns;
+    late Widget grid;
     return SliverLayoutBuilder(
       builder: (context, constraints) {
         final columnCount = constraints.crossAxisExtent >= 1280
@@ -1745,21 +1748,30 @@ class _MarketCategoryGridSliver extends StatelessWidget {
             : constraints.crossAxisExtent >= 760
             ? 2
             : 1;
-        return SliverGrid.builder(
-          itemCount: categories.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columnCount,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 8,
-            mainAxisExtent: 128,
-          ),
-          itemBuilder: (context, index) {
-            final category = categories[index];
-            return _MarketCategoryGridCard(
-              category: category,
-              onTap: () => onOpenCategory(category),
-            );
-          },
+        if (layoutColumns != columnCount) {
+          layoutColumns = columnCount;
+          grid = _buildGrid(columnCount);
+        }
+        return grid;
+      },
+    );
+  }
+
+  /// Builds category cards lazily using their existing fixed-height layout.
+  Widget _buildGrid(int columnCount) {
+    return SliverGrid.builder(
+      itemCount: categories.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columnCount,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 8,
+        mainAxisExtent: 128,
+      ),
+      itemBuilder: (context, index) {
+        final category = categories[index];
+        return _MarketCategoryGridCard(
+          category: category,
+          onTap: () => onOpenCategory(category),
         );
       },
     );

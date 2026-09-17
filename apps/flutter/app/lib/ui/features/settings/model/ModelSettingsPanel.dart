@@ -3215,17 +3215,16 @@ class _ProviderDetailScreen extends StatefulWidget {
     )
     onEditModelSettings,
   }) {
-    return Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (context) => _ProviderDetailScreen(
-          providerId: providerId,
-          initialData: initialData,
-          reload: reload,
-          onSelectModel: onSelectModel,
-          onAddModel: onAddModel,
-          onEditProvider: onEditProvider,
-          onEditModelSettings: onEditModelSettings,
-        ),
+    return showDialog<void>(
+      context: context,
+      builder: (context) => _ProviderDetailScreen(
+        providerId: providerId,
+        initialData: initialData,
+        reload: reload,
+        onSelectModel: onSelectModel,
+        onAddModel: onAddModel,
+        onEditProvider: onEditProvider,
+        onEditModelSettings: onEditModelSettings,
       ),
     );
   }
@@ -3278,86 +3277,120 @@ class _ProviderDetailScreenState extends State<_ProviderDetailScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final provider = _provider;
     if (provider == null) {
-      return const Scaffold(
-        body: Center(child: M3LoadingIndicator(size: 32)),
+      return const Dialog(
+        child: SizedBox(
+          width: 420,
+          height: 220,
+          child: Center(child: M3LoadingIndicator(size: 32)),
+        ),
       );
     }
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
+    final viewport = MediaQuery.sizeOf(context);
+    final dialogWidth = (viewport.width - 32).clamp(320.0, 760.0).toDouble();
+    final dialogHeight = (viewport.height - 48).clamp(320.0, 700.0).toDouble();
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: SizedBox(
+        width: dialogWidth,
+        height: dialogHeight,
+        child: Column(
           children: <Widget>[
-            ProviderLogo(
-              providerTypeId: provider.providerTypeId,
-              fallbackName: provider.name,
-              size: 30,
-              contentScale: 0.66,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 10, 8, 10),
+              child: Row(
+                children: <Widget>[
+                  ProviderLogo(
+                    providerTypeId: provider.providerTypeId,
+                    fallbackName: provider.name,
+                    size: 30,
+                    contentScale: 0.66,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      provider.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: l10n.settingsModelAddModel,
+                    icon: const Icon(Icons.playlist_add_outlined),
+                    onPressed: () => _run(() => widget.onAddModel(provider)),
+                  ),
+                  IconButton(
+                    tooltip: l10n.edit,
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () =>
+                        _run(() => widget.onEditProvider(provider)),
+                  ),
+                  IconButton(
+                    tooltip: MaterialLocalizations.of(
+                      context,
+                    ).closeButtonTooltip,
+                    icon: const Icon(Icons.close_outlined),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 10),
+            const Divider(height: 1),
             Expanded(
-              child: Text(
-                provider.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                children: <Widget>[
+                  Text(
+                    '${_providerTypeDisplayName(l10n, provider.providerTypeId)}'
+                    ' · ${l10n.settingsModelProviderModelCount(provider.models.length)}',
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (provider.models.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Column(
+                        children: <Widget>[
+                          Text(
+                            l10n.settingsModelNoModels,
+                            style: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: () =>
+                                _run(() => widget.onAddModel(provider)),
+                            style: SettingsControlStyles.sectionFilledButton(),
+                            icon: const Icon(Icons.playlist_add, size: 18),
+                            label: Text(l10n.settingsModelAddModel),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    _ProviderModelList(
+                      provider: provider,
+                      summaries: _data.summaries,
+                      chatBinding: _data.chatBinding,
+                      onSelectModel: (providerId, modelId) =>
+                          _run(() => widget.onSelectModel(providerId, modelId)),
+                      testingModelKey: null,
+                      onEditModelSettings: (currentProvider, currentModel) =>
+                          _run(
+                            () => widget.onEditModelSettings(
+                              currentProvider,
+                              currentModel,
+                            ),
+                          ),
+                    ),
+                ],
               ),
             ),
           ],
         ),
-        actions: <Widget>[
-          IconButton(
-            tooltip: l10n.settingsModelAddModel,
-            icon: const Icon(Icons.playlist_add_outlined),
-            onPressed: () => _run(() => widget.onAddModel(provider)),
-          ),
-          IconButton(
-            tooltip: l10n.edit,
-            icon: const Icon(Icons.edit_outlined),
-            onPressed: () => _run(() => widget.onEditProvider(provider)),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-        children: <Widget>[
-          Text(
-            '${_providerTypeDisplayName(l10n, provider.providerTypeId)}'
-            ' · ${l10n.settingsModelProviderModelCount(provider.models.length)}',
-            style: Theme.of(context).textTheme.bodySmall!.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (provider.models.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 28),
-              child: Column(
-                children: <Widget>[
-                  Text(
-                    l10n.settingsModelNoModels,
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () => _run(() => widget.onAddModel(provider)),
-                    style: SettingsControlStyles.sectionFilledButton(),
-                    icon: const Icon(Icons.playlist_add, size: 18),
-                    label: Text(l10n.settingsModelAddModel),
-                  ),
-                ],
-              ),
-            )
-          else
-            _ProviderModelList(
-              provider: provider,
-              summaries: _data.summaries,
-              chatBinding: _data.chatBinding,
-              onSelectModel: (providerId, modelId) =>
-                  _run(() => widget.onSelectModel(providerId, modelId)),
-              testingModelKey: null,
-              onEditModelSettings: (currentProvider, currentModel) => _run(
-                () => widget.onEditModelSettings(currentProvider, currentModel),
-              ),
-            ),
-        ],
       ),
     );
   }

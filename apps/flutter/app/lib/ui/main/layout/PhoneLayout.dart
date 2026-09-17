@@ -129,6 +129,7 @@ class _PhoneLayoutState extends State<PhoneLayout>
     _verticalDrag = 0;
   }
 
+  /// Builds retained content layers and animates their drawer presentation.
   @override
   Widget build(BuildContext context) {
     final appearance = navigationDrawerAppearanceOf(context);
@@ -252,6 +253,7 @@ class _PhoneLayoutState extends State<PhoneLayout>
               ),
               if (isDrawerOpen)
                 Positioned.fill(
+                  key: const ValueKey<String>('phoneDrawerDismissBarrier'),
                   left: widget.drawerWidth,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
@@ -260,6 +262,8 @@ class _PhoneLayoutState extends State<PhoneLayout>
                   ),
                 ),
               Positioned(
+                // Preserve the drawer subtree when the dismiss barrier changes.
+                key: const ValueKey<String>('phoneDrawerLayer'),
                 left: drawerOffset,
                 top: MediaQuery.paddingOf(context).top,
                 bottom: 0,

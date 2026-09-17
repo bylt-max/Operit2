@@ -137,6 +137,7 @@ class _WorkspaceFileBrowserContentState
                   child: ListView.separated(
                     controller: _scrollController,
                     primary: false,
+                    padding: EdgeInsets.zero,
                     physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: entries.length,
                     separatorBuilder: (context, index) => Divider(
