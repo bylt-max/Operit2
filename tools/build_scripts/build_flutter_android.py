@@ -11,6 +11,7 @@ from common import (
     copy_required_file,
     flutter_command,
     flutter_pub_get,
+    generate_dart_proxy_artifacts,
     read_properties,
     run,
     write_properties,
@@ -73,6 +74,7 @@ def main() -> int:
     if not args.skip_signing:
         ensure_android_signing()
     flutter = flutter_command()
+    generate_dart_proxy_artifacts()
     configure_android_flutter_sdk(flutter)
     flutter_pub_get(enforce_lockfile=args.enforce_lockfile)
     command = [
