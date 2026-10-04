@@ -128,9 +128,12 @@ jobs:
           if (-not (Test-Path ".ci-tools/typescript/node_modules/.bin/tsc.cmd")) {
             throw "Repository-managed TypeScript compiler was not installed"
           }
-          if (-not (Test-Path "plugins/packages/buildin/workflow/node_modules/esbuild/bin/esbuild.exe")) {
-            throw "esbuild binary was not installed"
+          Push-Location "plugins/packages/buildin/workflow"
+          corepack pnpm exec esbuild --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "esbuild executable is not usable"
           }
+          Pop-Location
 
       - name: Install Java
         uses: actions/setup-java@v5
