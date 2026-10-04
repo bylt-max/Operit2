@@ -94,8 +94,29 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Prepare project Python environment
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Project Python virtual environment is not usable"
+          }
+
+      - name: Install workflow plugin dependencies
+        working-directory: plugins/packages/buildin/workflow
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+
       - name: Install Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -164,7 +185,7 @@ jobs:
 
       - name: Check build environment
         shell: pwsh
-        run: python tools/build_scripts/check_build_environment.py --products app --github-runner
+        run: .\.venv\Scripts\python.exe tools/build_scripts/check_build_environment.py --products app --github-runner
 
       - name: Build and package Android app
         shell: pwsh
@@ -173,7 +194,7 @@ jobs:
           if ($version.Count -ne 1) {
             throw "apps/flutter/app/pubspec.yaml must contain exactly one release version line"
           }
-          python tools/build_scripts/build_flutter_android.py --build-name $version[0].Groups[1].Value --build-number $version[0].Groups[2].Value --enforce-lockfile
+          .\.venv\Scripts\python.exe tools/build_scripts/build_flutter_android.py --build-name $version[0].Groups[1].Value --build-number $version[0].Groups[2].Value --enforce-lockfile
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
