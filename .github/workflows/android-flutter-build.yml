@@ -121,6 +121,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path ".ci-tools/typescript" | Out-Null
           Push-Location ".ci-tools/typescript"
           npm init --yes --silent
+          npm pkg set name=operit-ci-typescript
           npm install --no-package-lock --ignore-scripts --save-dev typescript@5.9.2
           Pop-Location
           node "plugins/packages/buildin/workflow/node_modules/esbuild/install.js"
