@@ -66,6 +66,23 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Prepare project Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python --version
+
+      - name: Install workflow plugin dependencies
+        if: inputs.products != 'cli'
+        working-directory: plugins/packages/buildin/workflow
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+
       - name: Install FVM
         run: |
           dart pub global activate fvm "$FVM_VERSION"
@@ -82,15 +99,15 @@ jobs:
           targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-gnu
 
       - name: Check build environment
-        run: python3 tools/build_scripts/check_build_environment.py --products "${{ inputs.products }}" --cli-arches "${{ inputs.cli_arches }}" --github-runner
+        run: .venv/bin/python tools/build_scripts/check_build_environment.py --products "${{ inputs.products }}" --cli-arches "${{ inputs.cli_arches }}" --github-runner
 
       - name: Build and package Linux app
         if: inputs.products != 'cli'
-        run: python3 tools/build_scripts/build_flutter_linux.py --archive-path tools/release/dist/operit2-app-linux-x86_64.tar.gz --enforce-lockfile
+        run: .venv/bin/python tools/build_scripts/build_flutter_linux.py --archive-path tools/release/dist/operit2-app-linux-x86_64.tar.gz --enforce-lockfile
 
       - name: Build and package Linux CLI
         if: inputs.products != 'app'
-        run: python3 tools/build_scripts/build_cli_linux.py --arches "${{ inputs.cli_arches }}"
+        run: .venv/bin/python tools/build_scripts/build_cli_linux.py --arches "${{ inputs.cli_arches }}"
 
       - name: Upload Linux app artifact
         if: inputs.products != 'cli'
