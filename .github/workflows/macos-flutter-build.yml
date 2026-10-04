@@ -36,6 +36,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Prepare project Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python --version
+
+      - name: Install workflow plugin dependencies
+        if: inputs.products != 'cli'
+        working-directory: plugins/packages/buildin/workflow
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+
       - name: Install bootstrap Dart
         uses: dart-lang/setup-dart@v1
         with:
@@ -71,7 +93,7 @@ jobs:
           targets: x86_64-apple-darwin,aarch64-apple-darwin
 
       - name: Check build environment
-        run: python3 tools/build_scripts/check_build_environment.py --products "${{ inputs.products }}" --cli-arches all --github-runner
+        run: .venv/bin/python tools/build_scripts/check_build_environment.py --products "${{ inputs.products }}" --cli-arches all --github-runner
 
       - name: Cache Cargo outputs
         uses: actions/cache@v4
@@ -97,11 +119,11 @@ jobs:
 
       - name: Build and package macOS app
         if: inputs.products != 'cli'
-        run: python3 tools/build_scripts/build_flutter_macos.py
+        run: .venv/bin/python tools/build_scripts/build_flutter_macos.py
 
       - name: Build and package macOS CLI
         if: inputs.products != 'app'
-        run: python3 tools/build_scripts/build_cli_macos.py --arches all
+        run: .venv/bin/python tools/build_scripts/build_cli_macos.py --arches all
 
       - name: Upload macOS app artifact
         if: inputs.products != 'cli'
