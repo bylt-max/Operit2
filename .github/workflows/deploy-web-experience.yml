@@ -34,6 +34,22 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Prepare project Python environment
+        run: |
+          python -m venv .venv
+          .venv/bin/python --version
+
+      - name: Install workflow plugin dependencies
+        working-directory: plugins/packages/buildin/workflow
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+
       - name: Install FVM
         run: |
           dart pub global activate fvm "$FVM_VERSION"
