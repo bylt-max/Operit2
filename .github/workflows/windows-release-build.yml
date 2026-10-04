@@ -49,6 +49,28 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Prepare project Python environment
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe --version
+          if ($LASTEXITCODE -ne 0) {
+            throw "Project Python virtual environment is not usable"
+          }
+
+      - name: Install workflow plugin dependencies
+        if: inputs.products != 'cli'
+        working-directory: plugins/packages/buildin/workflow
+        shell: pwsh
+        run: |
+          corepack enable
+          corepack pnpm install --frozen-lockfile
+
       - name: Install FVM
         shell: pwsh
         run: |
@@ -72,17 +94,17 @@ jobs:
 
       - name: Check build environment
         shell: pwsh
-        run: python tools/build_scripts/check_build_environment.py --products "${{ inputs.products }}" --cli-arches "${{ inputs.cli_arches }}" --github-runner
+        run: .\.venv\Scripts\python.exe tools/build_scripts/check_build_environment.py --products "${{ inputs.products }}" --cli-arches "${{ inputs.cli_arches }}" --github-runner
 
       - name: Build and package Windows app
         if: inputs.products != 'cli'
         shell: pwsh
-        run: python tools/build_scripts/build_flutter_windows.py --archive-path tools/release/dist/operit2-app-windows-x86_64.zip --enforce-lockfile
+        run: .\.venv\Scripts\python.exe tools/build_scripts/build_flutter_windows.py --archive-path tools/release/dist/operit2-app-windows-x86_64.zip --enforce-lockfile
 
       - name: Build and package Windows CLI
         if: inputs.products != 'app'
         shell: pwsh
-        run: python tools/build_scripts/build_cli_windows.py --arches "${{ inputs.cli_arches }}"
+        run: .\.venv\Scripts\python.exe tools/build_scripts/build_cli_windows.py --arches "${{ inputs.cli_arches }}"
 
       - name: Upload Windows app artifact
         if: inputs.products != 'cli'
