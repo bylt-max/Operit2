@@ -115,6 +115,22 @@ jobs:
           corepack enable
           corepack pnpm install --frozen-lockfile
 
+      - name: Prepare TypeScript and esbuild tools
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ".ci-tools/typescript" | Out-Null
+          Push-Location ".ci-tools/typescript"
+          npm init --yes --silent
+          npm install --no-package-lock --ignore-scripts --save-dev typescript@5.9.2
+          Pop-Location
+          node "plugins/packages/buildin/workflow/node_modules/esbuild/install.js"
+          if (-not (Test-Path ".ci-tools/typescript/node_modules/.bin/tsc.cmd")) {
+            throw "Repository-managed TypeScript compiler was not installed"
+          }
+          if (-not (Test-Path "plugins/packages/buildin/workflow/node_modules/esbuild/bin/esbuild.exe")) {
+            throw "esbuild binary was not installed"
+          }
+
       - name: Install Java
         uses: actions/setup-java@v5
         with:
