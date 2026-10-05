@@ -359,6 +359,7 @@ fn pathSegments(path: &str) -> Vec<&str> {
         .collect()
 }
 
+/// Maps selected shared-storage folders to host mounts, not legacy plugin aliases.
 #[allow(non_snake_case)]
 fn normalizeWorkspaceBindingVfsPath(path: &str) -> Result<Option<String>, String> {
     let segments = pathSegments(path);
@@ -384,8 +385,12 @@ fn normalizeWorkspaceBindingVfsPath(path: &str) -> Result<Option<String>, String
         [ROOT_MNT, MNT_MACOS, rest @ ..] => {
             Ok(Some(joinNormalizedSegments(&[ROOT_MNT, MNT_MACOS], rest)))
         }
-        [ROOT_SDCARD, ..] | ["storage", "emulated", "0", ..] =>
-            Ok(Some(PathMapper::canonicalizeVfsPath(path)?)),
+        [ROOT_SDCARD, rest @ ..] | ["storage", "emulated", "0", rest @ ..] => {
+            Ok(Some(joinNormalizedSegments(
+                &[ROOT_MNT, MNT_ANDROID, MNT_ANDROID_SDCARD],
+                rest,
+            )))
+        }
         [ROOT_DATA, rest @ ..] => Ok(Some(joinNormalizedSegments(&[ROOT_DATA], rest))),
         ["workspace", ..] => Err("Workspace binding cannot use /workspace".to_string()),
         [ROOT_APP, ..] | [ROOT_MNT, ..] => Err(format!(
@@ -410,15 +415,12 @@ fn normalizeWindowsHostWorkspacePath(path: &str) -> Result<Option<String>, Strin
     )))
 }
 
+/// Maps an absolute host workspace path outside the recognized VFS roots.
 #[allow(non_snake_case)]
 fn normalizeAbsoluteHostWorkspacePath(path: &str) -> Result<String, String> {
     let segments = pathSegments(path);
     match segments.as_slice() {
         [] => Err("Workspace binding cannot use VFS root".to_string()),
-        ["storage", "emulated", "0", rest @ ..] => Ok(joinNormalizedSegments(
-            &[ROOT_MNT, MNT_ANDROID, MNT_ANDROID_SDCARD],
-            rest,
-        )),
         ["workspace", ..] => Err("Workspace binding cannot use /workspace".to_string()),
         [ROOT_APP, ..] | [ROOT_MNT, ..] => Err(format!(
             "Workspace binding must use /app/workspaces/<id> or a mounted VFS path: {path}"
@@ -605,6 +607,29 @@ mod tests {
     }
 
     #[test]
+    fn clean_on_exit_vfs_path_follows_the_active_identity_root() {
+        for runtimeRoot in [
+            "/Users/test/Library/Containers/app.operit/Data/Library/Application Support/Operit2/runtime data/identities/identity-a",
+            "/Volumes/External Disk/custom runtime/identities/identity-b",
+        ] {
+            let mapper = PathMapper::new(
+                PathBuf::from(runtimeRoot),
+                PathBuf::from("/custom workspaces"),
+            );
+            for relative in ["temp/clean_on_exit", "temp/clean_on_exit/terminal_output.log"] {
+                let vfsPath = format!("/app/data/{relative}");
+                let resolved = mapper.resolve(&vfsPath).unwrap();
+                assert_eq!(resolved.vfsPath, vfsPath);
+                assert_eq!(resolved.physicalPath, format!("{runtimeRoot}/{relative}"));
+            }
+            // Do not make arbitrary host paths valid VFS roots to mask a bad
+            // caller: all operations must retain the existing mapping contract.
+            let hostPath = format!("{runtimeRoot}/temp/clean_on_exit");
+            assert!(mapper.resolve(&hostPath).unwrap_err().contains("Unknown VFS root"));
+        }
+    }
+
+    #[test]
     fn rootListShowsVisibleRootsOnly() {
         let mut expected = vec!["app".to_string()];
         if !mntMountEntries().is_empty() {
@@ -712,7 +737,7 @@ mod tests {
                     .resolve("/sdcard/Download/Operit")
                     .unwrap()
                     .physicalPath,
-                "D:/operit/extensions/plugins/data"
+                "D:/operit/extensions/device/plugins/data"
             );
             assert_eq!(
                 mapper().resolve("/data/local/tmp").unwrap().physicalPath,
@@ -721,11 +746,12 @@ mod tests {
         }
         #[cfg(not(target_os = "android"))]
         {
-            assert_eq!(mapper().resolve("/sdcard/Download/Operit").unwrap().physicalPath, "D:/operit/extensions/plugins/data");
+            assert_eq!(mapper().resolve("/sdcard/Download/Operit").unwrap().physicalPath, "D:/operit/extensions/device/plugins/data");
             assert!(mapper().resolve("/data/local/tmp").is_err());
         }
     }
 
+    /// Keeps workspace bindings rooted in the app collection or host mounts.
     #[test]
     fn workspaceBindingPathUsesExplicitVfsRoots() {
         assert_eq!(
@@ -752,12 +778,65 @@ mod tests {
         );
         assert_eq!(
             PathMapper::normalizeWorkspaceBindingPath("/storage/emulated/0/Download").unwrap(),
-            "/app/data/extensions/plugins/data/Download"
+            "/mnt/android/sdcard/Download"
         );
         assert!(PathMapper::normalizeWorkspaceBindingPath("/workspace").is_err());
         assert!(PathMapper::normalizeWorkspaceBindingPath("relative/path").is_err());
     }
 
+    /// Preserves local Android directories across repeated workspace normalization.
+    #[test]
+    fn androidWorkspaceBindingPathsRemainOnTheSharedStorageMount() {
+        for (input, expected) in [
+            ("/sdcard", "/mnt/android/sdcard"),
+            ("/storage/emulated/0", "/mnt/android/sdcard"),
+            ("/sdcard/Download", "/mnt/android/sdcard/Download"),
+            (
+                "/storage/emulated/0/Download",
+                "/mnt/android/sdcard/Download",
+            ),
+            (
+                " /storage/emulated/0/Documents/My Project/ ",
+                "/mnt/android/sdcard/Documents/My Project",
+            ),
+            (
+                "/sdcard/Download/Operit/project",
+                "/mnt/android/sdcard/Download/Operit/project",
+            ),
+            (
+                "/sdcard/Download/Operit/plugins/project",
+                "/mnt/android/sdcard/Download/Operit/plugins/project",
+            ),
+            (
+                "/mnt/android/sdcard/Download/Operit/project",
+                "/mnt/android/sdcard/Download/Operit/project",
+            ),
+        ] {
+            let normalized = PathMapper::normalizeWorkspaceBindingPath(input).unwrap();
+            assert_eq!(normalized, expected, "incorrect workspace mount for {input}");
+            assert_eq!(
+                PathMapper::normalizeWorkspaceBindingPath(&normalized).unwrap(),
+                normalized,
+                "workspace normalization must be idempotent for {input}"
+            );
+            assert_eq!(
+                PathMapper::canonicalizeVfsPath(&normalized).unwrap(),
+                normalized,
+                "workspace mounts must not be rewritten as plugin data for {input}"
+            );
+        }
+    }
+
+    /// Rejects runtime plugin data as a user-selected workspace binding.
+    #[test]
+    fn workspaceBindingRejectsPluginStoragePaths() {
+        assert!(PathMapper::normalizeWorkspaceBindingPath(
+            "/app/data/extensions/plugins/data/Download"
+        )
+        .is_err());
+    }
+
+    /// Rejects parent traversal in virtual paths.
     #[test]
     fn rejectsParentSegments() {
         assert!(mapper().resolve("/app/workspaces/../x").is_err());
