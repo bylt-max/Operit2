@@ -620,7 +620,7 @@ String _command(String executable) {
 }
 
 bool _isCargoExecutable(String executable) {
-  final name = executable.split(RegExp(r'[\\/')).last.toLowerCase();
+  final name = executable.split(RegExp(r'[\\/]')).last.toLowerCase();
   return name == 'cargo' ||
       name == 'cargo.exe' ||
       name == 'cargo.cmd' ||
