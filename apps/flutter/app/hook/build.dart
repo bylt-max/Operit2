@@ -620,7 +620,7 @@ String _command(String executable) {
 }
 
 bool _isCargoExecutable(String executable) {
-  final name = executable.split(RegExp(r'[\\/]')).last.toLowerCase();
+  final name = executable.split(RegExp(r'[\\/')).last.toLowerCase();
   return name == 'cargo' ||
       name == 'cargo.exe' ||
       name == 'cargo.cmd' ||
@@ -807,12 +807,22 @@ String _pythonExecutable(Directory repoRoot) {
   final venvPython = Platform.isWindows
       ? File.fromUri(repoRoot.uri.resolve('.venv/Scripts/python.exe'))
       : File.fromUri(repoRoot.uri.resolve('.venv/bin/python'));
-  // CI runners do not create the repository virtualenv; fall back to the
-  // Python interpreter available on PATH.
-  if (!venvPython.existsSync()) {
-    return Platform.isWindows ? 'python.exe' : 'python3';
+  // CI runners may keep a stale or partial repository virtualenv where
+  // python.exe exists on disk but cannot be launched. Probe the
+  // interpreter and fall back to the Python on PATH when it fails.
+  if (venvPython.existsSync() && _canRunPython(venvPython.path)) {
+    return venvPython.path;
   }
-  return venvPython.path;
+  return Platform.isWindows ? 'python.exe' : 'python3';
+}
+
+bool _canRunPython(String executable) {
+  try {
+    final result = Process.runSync(executable, const ['--version']);
+    return result.exitCode == 0;
+  } on ProcessException {
+    return false;
+  }
 }
 
 /// Reads the exact Flutter build target from the hook configuration schema.
